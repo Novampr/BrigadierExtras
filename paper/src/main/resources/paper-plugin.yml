@@ -1,4 +1,4 @@
-name: Brigadier Extras
+name: BrigadierExtras
 description: Implement extra features into Brigadier, now as a Paper plugin!
 version: '1.0-SNAPSHOT'
 main: net.kore.brigadierextras.paper.PaperBrigadierExtras
