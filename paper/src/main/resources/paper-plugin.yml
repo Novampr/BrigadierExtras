@@ -1,7 +1,7 @@
 name: BrigadierExtras
 description: Implement extra features into Brigadier, now as a Paper plugin!
 version: '1.0-SNAPSHOT'
-main: net.kore.brigadierextras.paper.PaperBrigadierExtras
+main: net.nova.brigadierextras.paper.PaperBrigadierExtras
 api-version: '1.21.3'
 load: STARTUP
 authors: [NovaDev]

@@ -7,3 +7,4 @@
 /brigadierextras op 5
 /brigadierextras addition 1 2
 /brigadierextras subtract 23 56
+/brigadierextras addition 5 8
