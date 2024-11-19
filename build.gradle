@@ -1,0 +1,31 @@
+plugins {
+    id 'java'
+    id 'fabric-loom' version '1.8-SNAPSHOT' apply false
+    id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
+}
+
+group = 'net.nova'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://libraries.minecraft.net"
+    }
+}
+
+dependencies {
+    compileOnly('com.mojang:brigadier:1.3.10')
+}
+
+subprojects {
+    if (project.name == "fabric") {
+        apply plugin: "fabric-loom"
+    }
+    apply plugin: "com.github.johnrengelman.shadow"
+}
+
+tasks.register('allBuild') {
+    dependsOn(":fabric:build")
+    dependsOn(":paper:build")
+}

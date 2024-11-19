@@ -1,0 +1,9 @@
+/brigadierextras
+/brigadierextras 5 1
+/brigadierextras arg1 5 2
+/brigadierextras op
+/brigadierextras arg1
+/brigadierextras arg1 5
+/brigadierextras op 5
+/brigadierextras addition 1 2
+/brigadierextras subtract 23 56

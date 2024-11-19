@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "brigadierextras",
+  "version": "${version}",
+
+  "name": "Brigadier Extras",
+  "description": "Implement extra features into Brigadier, now as a Fabric mod!",
+  "authors": ["Nova"],
+  "contact": {},
+
+  "license": "GPL-3.0",
+  "icon": "assets/brigadierextras/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": ["net.nova.brigadierextras.fabric.FabricBrigadierExtras"]
+  },
+
+  "mixins": ["brigadierextras.mixins.json"],
+
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
