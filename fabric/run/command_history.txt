@@ -8,3 +8,37 @@
 /brigadierextras addition 1 2
 /brigadierextras subtract 23 56
 /brigadierextras addition 5 8
+/brigadierextras @s {"text":"Hello world!"}
+/brigadierextras op 5
+/brigadierextras Player223 {"text":"You."}
+/brigadierextras Player223 {"text":"You.","color":"red"}
+/brigadierextras addition 1 2
+/brigadierextras @s {"text":""}
+/brigadierextras @s {"text":"This is a message."}
+/brigadierextras @s {"text":":D","color":"green"}
+/brigadierextras subtract 10 5
+/brigadierextras op 1287312873
+/brigadierextras
+/brigadierextras addition 5 5
+/brigadierextras op 5
+/brigadierextras 5 add 6
+/brigadierextras math 5 add 6
+/brigadierextras math 5 ADD 6
+/brigadierextras math 5 ADD 5
+/brigadierextras math 1 SUB 6
+/brigadierextras math 4 MUL 6
+/brigadierextras math 8 DIV 2
+/brigadierextras math 2786 MUL 293874
+/brigadierextras freeze @s
+/brigadierextras freeze bd937010-931d-4562-9924-10072ea1c56f
+/brigadierextras freeze @e
+/brigadierextras freeze @a
+/brigadierextras freeze @e
+/brigadierextras freeze @a
+/brigadierextras freeze 58316fd7-5f27-4eaf-9ddb-5ee1253c75c9
+/brigadierextras freeze @s
+/locate structure #minecraft:village
+/tp @s -192 ~ 672
+/gamemode spectator
+/gamemode creative
+/brigadierextras freeze @e[type=minecraft:villager]

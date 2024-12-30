@@ -2,9 +2,8 @@ package net.nova.brigadierextras.fabric.test;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
-import net.nova.brigadierextras.CommandSender;
 
-public class FabricCommandSender implements CommandSender<CommandSourceStack> {
+public class FabricCommandSender {
     private final CommandSourceStack commandSourceStack;
 
     public FabricCommandSender(CommandSourceStack commandSourceStack) {

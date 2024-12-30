@@ -8,6 +8,8 @@ import net.nova.brigadierextras.CommandBuilder;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.function.Function;
+
 public class PaperCommandUtils {
     /**
      * Register a command with Paper's Brigadier, works best if done once
@@ -35,6 +37,36 @@ public class PaperCommandUtils {
             Commands commands = event.registrar();
             for (Object command : cmds) {
                 CommandBuilder.registerCommand(commands.getDispatcher(), CommandSourceStack.class, command);
+            }
+        });
+    }
+
+    /**
+     * Register a command with Paper's Brigadier, works best if done once
+     * @param plugin The plugin registering this command
+     * @param command The command to register
+     * @see #register(Plugin, Object...)
+     */
+    public static <T> void register(Plugin plugin, Class<T> senderClass, Function<CommandSourceStack, T> translate, Object command) {
+        LifecycleEventManager<@NotNull Plugin> manager = plugin.getLifecycleManager();
+        manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            Commands commands = event.registrar();
+            CommandBuilder.registerCommand(commands.getDispatcher(), senderClass, CommandSourceStack.class, translate, command);
+        });
+    }
+
+    /**
+     * Register multiple commands with Paper's Brigadier, registers multiple commands
+     * @param plugin The plugin registering this command
+     * @param cmds The commands to register
+     * @see #register(Plugin, Object)
+     */
+    public static <T> void register(Plugin plugin, Class<T> senderClass, Function<CommandSourceStack, T> translate, Object... cmds) {
+        LifecycleEventManager<@NotNull Plugin> manager = plugin.getLifecycleManager();
+        manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            Commands commands = event.registrar();
+            for (Object command : cmds) {
+                CommandBuilder.registerCommand(commands.getDispatcher(), senderClass, CommandSourceStack.class, translate, command);
             }
         });
     }

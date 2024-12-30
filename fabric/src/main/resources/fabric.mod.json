@@ -18,9 +18,21 @@
 
   "mixins": ["brigadierextras.mixins.json"],
 
+  "accessWidener": "brigadierextras.accessWidener",
+
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric": "*",
     "minecraft": "${minecraft_version}"
+  },
+
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.discord": "https://discord.gg/hadcHUfaSk"
+      },
+      "badges": [ "library" ],
+      "update_checker": false
+    }
   }
 }

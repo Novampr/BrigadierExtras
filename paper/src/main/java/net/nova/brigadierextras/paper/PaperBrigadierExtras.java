@@ -3,7 +3,6 @@ package net.nova.brigadierextras.paper;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import io.papermc.paper.command.brigadier.argument.SignedMessageResolver;
 import io.papermc.paper.command.brigadier.argument.predicate.ItemStackPredicate;
@@ -13,15 +12,14 @@ import io.papermc.paper.command.brigadier.argument.resolvers.BlockPositionResolv
 import io.papermc.paper.command.brigadier.argument.resolvers.FinePositionResolver;
 import io.papermc.paper.command.brigadier.argument.resolvers.PlayerProfileListResolver;
 import io.papermc.paper.entity.LookAnchor;
-import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
-import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import net.nova.brigadierextras.annotated.AnnotationModifier;
 import net.nova.brigadierextras.paper.annotated.OP;
 import net.nova.brigadierextras.paper.annotated.Permission;
+import net.nova.brigadierextras.paper.resolvers.EntityResolver;
+import net.nova.brigadierextras.paper.resolvers.PlayerResolver;
 import net.nova.brigadierextras.paper.test.PaperCommandSender;
 import net.nova.brigadierextras.paper.test.TestCommand;
-import net.nova.brigadierextras.paper.wrappers.WEntity;
-import net.nova.brigadierextras.paper.wrappers.WPlayer;
-import net.nova.brigadierextras.paper.wrappers.WTime;
+import net.nova.brigadierextras.paper.wrappers.Time;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -38,11 +36,9 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.structure.Mirror;
 import org.bukkit.block.structure.StructureRotation;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
-import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
 import java.util.UUID;
@@ -53,10 +49,6 @@ public final class PaperBrigadierExtras extends JavaPlugin {
     public void onEnable() {
         BrigadierExtras.init();
 
-        CommandBuilder.registerArgument(WEntity.Single.class, ArgumentTypes.entity(), WEntity.Single::new);
-        CommandBuilder.registerArgument(WEntity.Multiple.class, ArgumentTypes.entities(), WEntity.Multiple::new);
-        CommandBuilder.registerArgument(WPlayer.Single.class, ArgumentTypes.player(), WPlayer.Single::new);
-        CommandBuilder.registerArgument(WPlayer.Multiple.class, ArgumentTypes.players(), WPlayer.Multiple::new);
         CommandBuilder.registerArgument(PlayerProfileListResolver.class, ArgumentTypes.playerProfiles());
         CommandBuilder.registerArgument(BlockPositionResolver.class, ArgumentTypes.blockPosition());
         CommandBuilder.registerArgument(FinePositionResolver.class, ArgumentTypes.finePosition());
@@ -78,9 +70,14 @@ public final class PaperBrigadierExtras extends JavaPlugin {
         CommandBuilder.registerArgument(UUID.class, ArgumentTypes.uuid());
         CommandBuilder.registerArgument(Criteria.class, ArgumentTypes.objectiveCriteria());
         CommandBuilder.registerArgument(LookAnchor.class, ArgumentTypes.entityAnchor());
-        CommandBuilder.registerArgument(WTime.class, ArgumentTypes.time(), WTime::new);
+        CommandBuilder.registerArgument(Time.class, ArgumentTypes.time(), Time::new);
         CommandBuilder.registerArgument(Mirror.class, ArgumentTypes.templateMirror());
         CommandBuilder.registerArgument(StructureRotation.class, ArgumentTypes.templateRotation());
+
+        CommandBuilder.registerResolver(new PlayerResolver());
+        CommandBuilder.registerResolver(new PlayerResolver.Multiple());
+        CommandBuilder.registerResolver(new EntityResolver());
+        CommandBuilder.registerResolver(new EntityResolver.Multiple());
 
         CommandBuilder.registerRootModifier(new RootModifier(1, new RootModifier.Handler() {
             @Override
@@ -120,12 +117,30 @@ public final class PaperBrigadierExtras extends JavaPlugin {
             }
         }));
 
+        CommandBuilder.registerAnnotationModifier(
+                new AnnotationModifier<>(
+                        0,
+                        OP.class,
+                        (argumentBuilder, permission) ->
+                                argumentBuilder.requires(
+                                        sender -> ((CommandSourceStack) sender).getSender().isOp()
+                                )
+                )
+        );
+
+        CommandBuilder.registerAnnotationModifier(
+                new AnnotationModifier<>(
+                        1,
+                        Permission.class,
+                        (argumentBuilder, permission) ->
+                                argumentBuilder.requires(
+                                        sender -> ((CommandSourceStack) sender).getSender().hasPermission(permission.value())
+                                )
+                )
+        );
+
         if (System.getProperty("be.test", "nope").equals("TESTMEPLEASE")) {
-            LifecycleEventManager<@NotNull Plugin> manager = this.getLifecycleManager();
-            manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
-                Commands commands = event.registrar();
-                CommandBuilder.registerCommand(commands.getDispatcher(), PaperCommandSender.class, PaperCommandSender::new, new TestCommand());
-            });
+            PaperCommandUtils.register(this, PaperCommandSender.class, PaperCommandSender::new, new TestCommand());
         }
     }
 

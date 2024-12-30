@@ -5,3 +5,4 @@ main: net.nova.brigadierextras.paper.PaperBrigadierExtras
 api-version: '1.21.3'
 load: STARTUP
 authors: [NovaDev]
+folia-supported: true

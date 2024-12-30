@@ -1,0 +1,4 @@
+accessWidener v2 named
+
+accessible field net/minecraft/commands/arguments/ObjectiveArgument ERROR_OBJECTIVE_NOT_FOUND Lcom/mojang/brigadier/exceptions/DynamicCommandExceptionType;
+accessible field net/minecraft/commands/arguments/TeamArgument ERROR_TEAM_NOT_FOUND Lcom/mojang/brigadier/exceptions/DynamicCommandExceptionType;

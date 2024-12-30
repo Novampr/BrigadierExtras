@@ -2,9 +2,8 @@ package net.nova.brigadierextras.paper.test;
 
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
-import net.nova.brigadierextras.CommandSender;
 
-public class PaperCommandSender implements CommandSender<CommandSourceStack> {
+public class PaperCommandSender {
     private final CommandSourceStack commandSourceStack;
 
     public PaperCommandSender(CommandSourceStack commandSourceStack) {

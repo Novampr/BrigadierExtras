@@ -5,6 +5,11 @@ plugins {
 version = rootProject.mod_version
 group = rootProject.maven_group
 
+// Loom is defined in the root build.gradle
+loom {
+    accessWidenerPath = file("src/main/resources/brigadierextras.accesswidener")
+}
+
 configurations {
     shadowBundle {
         canBeResolved = true

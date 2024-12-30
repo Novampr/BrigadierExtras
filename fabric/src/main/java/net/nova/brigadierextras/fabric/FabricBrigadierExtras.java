@@ -1,10 +1,9 @@
 package net.nova.brigadierextras.fabric;
 
-import com.mojang.brigadier.builder.ArgumentBuilder;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
@@ -26,32 +25,38 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.world.inventory.SlotRange;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Mirror;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import net.nova.brigadierextras.BrigadierExtras;
 import net.nova.brigadierextras.CommandBuilder;
-import net.nova.brigadierextras.annotated.BranchModifier;
-import net.nova.brigadierextras.annotated.RootModifier;
+import net.nova.brigadierextras.annotated.AnnotationModifier;
 import net.nova.brigadierextras.fabric.annotated.OP;
 import net.nova.brigadierextras.fabric.annotated.Permission;
 import net.nova.brigadierextras.fabric.test.FabricCommandSender;
 import net.nova.brigadierextras.fabric.test.TestCommand;
-import net.nova.brigadierextras.fabric.wrappers.*;
+import net.nova.brigadierextras.fabric.resolvers.*;
+import net.nova.brigadierextras.fabric.wrappers.Dimension;
+import net.nova.brigadierextras.fabric.wrappers.Rotation;
+import net.nova.brigadierextras.fabric.wrappers.Slot;
 
-import java.lang.reflect.Method;
 import java.util.UUID;
 
 /**
  * <b><i>Minecraft</i></b>
  */
 public class FabricBrigadierExtras implements ModInitializer {
+    private MinecraftServer minecraftServer;
+
     @Override
     public void onInitialize() {
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> minecraftServer = server);
+
         BrigadierExtras.init();
 
         CommandBuildContext context = Commands.createValidationContext(VanillaRegistries.createLookup());
@@ -60,95 +65,88 @@ public class FabricBrigadierExtras implements ModInitializer {
         CommandBuilder.registerArgument(ChatFormatting.class, ColorArgument.color());
         CommandBuilder.registerArgument(Component.class, ComponentArgument.textComponent(context));
         CommandBuilder.registerArgument(CompoundTag.class, CompoundTagArgument.compoundTag());
-        CommandBuilder.registerArgument(WDimension.class, DimensionArgument.dimension(), WDimension::new);
+        CommandBuilder.registerArgument(Dimension.class, DimensionArgument.dimension(), Dimension::new);
         CommandBuilder.registerArgument(EntityAnchorArgument.Anchor.class, EntityAnchorArgument.anchor());
-        CommandBuilder.registerArgument(WSelector.Player.class, EntityArgument.player(), WSelector.Player::new);
-        CommandBuilder.registerArgument(WSelector.Players.class, EntityArgument.players(), WSelector.Players::new);
-        CommandBuilder.registerArgument(WSelector.Entity.class, EntityArgument.entity(), WSelector.Entity::new);
-        CommandBuilder.registerArgument(WSelector.Entities.class, EntityArgument.entities(), WSelector.Entities::new);
         CommandBuilder.registerArgument(GameType.class, GameModeArgument.gameMode());
         CommandBuilder.registerArgument(GameProfileArgument.Result.class, GameProfileArgument.gameProfile());
         CommandBuilder.registerArgument(Heightmap.Types.class, HeightmapTypeArgument.heightmap());
         CommandBuilder.registerArgument(MessageArgument.Message.class, MessageArgument.message());
         CommandBuilder.registerArgument(NbtPathArgument.NbtPath.class, NbtPathArgument.nbtPath());
         CommandBuilder.registerArgument(Tag.class, NbtTagArgument.nbtTag());
-        CommandBuilder.registerArgument(WObjective.class, ObjectiveArgument.objective(), WObjective::new);
         CommandBuilder.registerArgument(ObjectiveCriteria.class, ObjectiveCriteriaArgument.criteria());
         CommandBuilder.registerArgument(OperationArgument.Operation.class, OperationArgument.operation());
         CommandBuilder.registerArgument(ParticleOptions.class, ParticleArgument.particle(context));
         CommandBuilder.registerArgument(ResourceLocation.class, ResourceLocationArgument.id());
         CommandBuilder.registerArgument(DisplaySlot.class, ScoreboardSlotArgument.displaySlot());
-        CommandBuilder.registerArgument(WScoreHolder.Single.class, ScoreHolderArgument.scoreHolder(), WScoreHolder.Single::new);
-        CommandBuilder.registerArgument(WScoreHolder.Multiple.class, ScoreHolderArgument.scoreHolders(), WScoreHolder.Multiple::new);
-        CommandBuilder.registerArgument(WSlot.class, SlotArgument.slot(), WSlot::new);
+        CommandBuilder.registerArgument(Slot.class, SlotArgument.slot(), Slot::new);
         CommandBuilder.registerArgument(SlotRange.class, SlotsArgument.slots());
         CommandBuilder.registerArgument(Style.class, StyleArgument.style(context));
-        CommandBuilder.registerArgument(WTeam.class, TeamArgument.team(), WTeam::new);
         CommandBuilder.registerArgument(Mirror.class, TemplateMirrorArgument.templateMirror());
-        CommandBuilder.registerArgument(Rotation.class, TemplateRotationArgument.templateRotation());
+        CommandBuilder.registerArgument(net.minecraft.world.level.block.Rotation.class, TemplateRotationArgument.templateRotation());
         CommandBuilder.registerArgument(UUID.class, UuidArgument.uuid());
         CommandBuilder.registerArgument(BlockPredicateArgument.Result.class, BlockPredicateArgument.blockPredicate(context));
         CommandBuilder.registerArgument(BlockInput.class, BlockStateArgument.block(context));
-        CommandBuilder.registerArgument(WCoordinates.BlockPos.class, BlockPosArgument.blockPos(), WCoordinates.BlockPos::new);
-        CommandBuilder.registerArgument(WCoordinates.ColumnPos.class, ColumnPosArgument.columnPos(), WCoordinates.ColumnPos::new);
-        CommandBuilder.registerArgument(WCoordinates.Rotation.class, RotationArgument.rotation(), WCoordinates.Rotation::new);
-        CommandBuilder.registerArgument(WCoordinates.Vec2.class, Vec2Argument.vec2(), WCoordinates.Vec2::new);
-        CommandBuilder.registerArgument(WCoordinates.Vec3.class, Vec3Argument.vec3(), WCoordinates.Vec3::new);
+        CommandBuilder.registerArgument(Rotation.class, RotationArgument.rotation(), Rotation::new);
         CommandBuilder.registerArgument(FunctionArgument.Result.class, FunctionArgument.functions());
         CommandBuilder.registerArgument(ItemInput.class, ItemArgument.item(context));
         CommandBuilder.registerArgument(ItemPredicateArgument.Result.class, ItemPredicateArgument.itemPredicate(context));
 
-        CommandBuilder.registerRootModifier(new RootModifier(1, new RootModifier.Handler() {
-            @Override
-            public <T> LiteralArgumentBuilder<T> modify(LiteralArgumentBuilder<T> argumentBuilder, Class<?> clazz) {
-                if (clazz.isAnnotationPresent(Permission.class)) {
-                    return argumentBuilder.requires(
-                            sender ->
-                                    Permissions.check(
-                                            (CommandSourceStack) sender,
-                                            clazz.getAnnotation(Permission.class).value()
-                                    )
-                    );
-                }
+        CommandBuilder.registerResolver(new BlockPosResolver());
+        CommandBuilder.registerResolver(new ColumnPosResolver());
+        CommandBuilder.registerResolver(new Vec2Resolver());
+        CommandBuilder.registerResolver(new Vec3Resolver());
+        CommandBuilder.registerResolver(new TeamResolver());
+        CommandBuilder.registerResolver(new ObjectiveResolver());
+        CommandBuilder.registerResolver(new ScoreHolderResolver());
+        CommandBuilder.registerResolver(new ScoreHolderResolver.Multiple());
+        CommandBuilder.registerResolver(new SelectorResolver.Player());
+        CommandBuilder.registerResolver(new SelectorResolver.Players());
+        CommandBuilder.registerResolver(new SelectorResolver.Entity());
+        CommandBuilder.registerResolver(new SelectorResolver.Entities());
 
-                if (clazz.isAnnotationPresent(OP.class)) {
-                    return argumentBuilder.requires(
-                            sender ->
-                                    ((CommandSourceStack) sender).hasPermission(clazz.getAnnotation(OP.class).value())
-                    );
-                }
+        CommandBuilder.registerAnnotationModifier(
+                new AnnotationModifier<>(
+                        0,
+                        OP.class,
+                        (argumentBuilder, op) -> {
+                            int opValue;
 
-                return argumentBuilder;
-            }
-        }));
+                            try {
+                                if (minecraftServer instanceof DedicatedServer dedicatedServer) {
+                                    opValue = dedicatedServer.getProperties().opPermissionLevel;
+                                } else {
+                                    opValue = 4;
+                                }
+                            } catch (Exception e) { // Honestly not sure what happens on the Integrated Server if I referance Dedi, lets not find out
+                                opValue = 4;
+                            }
 
-        CommandBuilder.registerBuilderModifier(new BranchModifier(1, new BranchModifier.Handler() {
-            @Override
-            public <T> ArgumentBuilder<T, ?> modify(ArgumentBuilder<T, ?> argumentBuilder, Method method, Class<?> clazz) {
-                if (method.isAnnotationPresent(Permission.class)) {
-                    return argumentBuilder.requires(
-                            sender ->
-                                    Permissions.check(
-                                            (CommandSourceStack) sender,
-                                            method.getAnnotation(Permission.class).value()
-                                    )
-                    );
-                }
+                            int finalOpValue = opValue;
+                            return argumentBuilder.requires(
+                                    sender -> ((CommandSourceStack) sender).hasPermission(op.value() < 0 ? finalOpValue : op.value())
+                            );
+                        }
+                )
+        );
 
-                if (method.isAnnotationPresent(OP.class)) {
-                    return argumentBuilder.requires(
-                            sender ->
-                                    ((CommandSourceStack) sender).hasPermission(method.getAnnotation(OP.class).value())
-                    );
-                }
-
-                return argumentBuilder;
-            }
-        }));
+        CommandBuilder.registerAnnotationModifier(
+                new AnnotationModifier<>(
+                        1,
+                        Permission.class,
+                        (argumentBuilder, permission) ->
+                                argumentBuilder.requires(
+                                        sender ->
+                                                Permissions.check(
+                                                        (CommandSourceStack) sender,
+                                                        permission.value()
+                                                )
+                                )
+                )
+        );
 
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             CommandRegistrationCallback.EVENT.register((commandDispatcher, commandBuildContext, commandSelection) -> {
-                CommandBuilder.registerCommand(commandDispatcher, FabricCommandSender.class, FabricCommandSender::new, new TestCommand());
+                CommandBuilder.registerCommand(commandDispatcher, FabricCommandSender.class, CommandSourceStack.class, FabricCommandSender::new, new TestCommand());
             });
         }
     }
