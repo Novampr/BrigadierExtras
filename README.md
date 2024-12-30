@@ -8,6 +8,6 @@ Examples can be found in the wiki
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Join-S?style=for-the-badge&logo=discord&logoColor=ffffff&labelColor=0D1117&color=0D1117">
   <source media="(prefers-color-scheme: light)" srcset="https://img.shields.io/badge/Join-S?style=for-the-badge&logo=discord&logoColor=000000&labelColor=ffffff&color=ffffff">
-  <img width="600" alt="A demo of Symbolica" src="https://img.shields.io/badge/Join-S?style=for-the-badge&logo=discord&logoColor=000000&labelColor=ffffff&color=ffffff">
+  <img width="600" alt="Discord Join Button" src="https://img.shields.io/badge/Join-S?style=for-the-badge&logo=discord&logoColor=000000&labelColor=ffffff&color=ffffff">
 </picture>
 </a>
