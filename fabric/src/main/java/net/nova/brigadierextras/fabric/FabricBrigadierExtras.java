@@ -2,6 +2,7 @@ package net.nova.brigadierextras.fabric;
 
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
@@ -36,6 +37,9 @@ import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import net.nova.brigadierextras.BrigadierExtras;
 import net.nova.brigadierextras.CommandBuilder;
 import net.nova.brigadierextras.annotated.AnnotationModifier;
+import net.nova.brigadierextras.annotated.BranchModifier;
+import net.nova.brigadierextras.annotated.Command;
+import net.nova.brigadierextras.annotated.RootModifier;
 import net.nova.brigadierextras.fabric.annotated.OP;
 import net.nova.brigadierextras.fabric.annotated.Permission;
 import net.nova.brigadierextras.fabric.test.FabricCommandSender;
@@ -44,6 +48,7 @@ import net.nova.brigadierextras.fabric.resolvers.*;
 import net.nova.brigadierextras.fabric.wrappers.Dimension;
 import net.nova.brigadierextras.fabric.wrappers.Rotation;
 import net.nova.brigadierextras.fabric.wrappers.Slot;
+import net.nova.brigadierextras.fabric.wrappers.Time;
 
 import java.util.UUID;
 
@@ -68,7 +73,6 @@ public class FabricBrigadierExtras implements ModInitializer {
         CommandBuilder.registerArgument(Dimension.class, DimensionArgument.dimension(), Dimension::new);
         CommandBuilder.registerArgument(EntityAnchorArgument.Anchor.class, EntityAnchorArgument.anchor());
         CommandBuilder.registerArgument(GameType.class, GameModeArgument.gameMode());
-        CommandBuilder.registerArgument(GameProfileArgument.Result.class, GameProfileArgument.gameProfile());
         CommandBuilder.registerArgument(Heightmap.Types.class, HeightmapTypeArgument.heightmap());
         CommandBuilder.registerArgument(MessageArgument.Message.class, MessageArgument.message());
         CommandBuilder.registerArgument(NbtPathArgument.NbtPath.class, NbtPathArgument.nbtPath());
@@ -87,9 +91,9 @@ public class FabricBrigadierExtras implements ModInitializer {
         CommandBuilder.registerArgument(BlockPredicateArgument.Result.class, BlockPredicateArgument.blockPredicate(context));
         CommandBuilder.registerArgument(BlockInput.class, BlockStateArgument.block(context));
         CommandBuilder.registerArgument(Rotation.class, RotationArgument.rotation(), Rotation::new);
-        CommandBuilder.registerArgument(FunctionArgument.Result.class, FunctionArgument.functions());
         CommandBuilder.registerArgument(ItemInput.class, ItemArgument.item(context));
         CommandBuilder.registerArgument(ItemPredicateArgument.Result.class, ItemPredicateArgument.itemPredicate(context));
+        CommandBuilder.registerArgument(Time.class, TimeArgument.time(), Time::new);
 
         CommandBuilder.registerResolver(new BlockPosResolver());
         CommandBuilder.registerResolver(new ColumnPosResolver());
@@ -103,6 +107,8 @@ public class FabricBrigadierExtras implements ModInitializer {
         CommandBuilder.registerResolver(new SelectorResolver.Players());
         CommandBuilder.registerResolver(new SelectorResolver.Entity());
         CommandBuilder.registerResolver(new SelectorResolver.Entities());
+        CommandBuilder.registerResolver(new GameProfileResolver());
+        CommandBuilder.registerResolver(new FunctionResolver());
 
         CommandBuilder.registerAnnotationModifier(
                 new AnnotationModifier<>(

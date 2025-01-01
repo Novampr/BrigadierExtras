@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'fabric-loom' version '1.8-SNAPSHOT' apply false
-    id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
+    id 'fabric-loom' version '1.7-SNAPSHOT' apply false
+    id 'com.gradleup.shadow' version '9.0.0-beta4' apply false
 }
 
 group = 'net.nova'
@@ -23,10 +23,13 @@ subprojects {
     if (project.name == "fabric") {
         apply plugin: "fabric-loom"
     }
-    apply plugin: "com.github.johnrengelman.shadow"
+    apply plugin: "com.gradleup.shadow"
 }
 
-tasks.register('allBuild') {
-    dependsOn(":fabric:build")
-    dependsOn(":paper:build")
-}
+tasks.build.dependsOn(":fabric:build")
+tasks.build.dependsOn(":paper:build")
+
+//tasks.register('allBuild') {
+//    dependsOn(":fabric:build")
+//    dependsOn(":paper:build")
+//}
