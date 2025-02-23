@@ -67,14 +67,10 @@ java {
 }
 
 jar {
-    destinationDirectory = file("$rootProject.rootDir/dev_output")
-
     archiveClassifier = 'dev'
 }
 
 shadowJar {
-    destinationDirectory = file("$rootProject.rootDir/dev_output")
-
     configurations = [project.configurations.shadowBundle]
     archiveClassifier = 'dev-shadow'
 }
@@ -84,6 +80,4 @@ remapJar {
 
     dependsOn shadowJar
     mustRunAfter shadowJar
-
-    destinationDirectory = file("$rootProject.rootDir/output")
 }

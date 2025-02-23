@@ -18,7 +18,7 @@
 
   "mixins": ["brigadierextras.mixins.json"],
 
-  "accessWidener": "brigadierextras.accessWidener",
+  "accessWidener": "brigadierextras.accesswidener",
 
   "depends": {
     "fabricloader": ">=${loader_version}",

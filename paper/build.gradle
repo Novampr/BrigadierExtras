@@ -51,14 +51,10 @@ java {
 }
 
 jar {
-    destinationDirectory = file("$rootProject.rootDir/dev_output")
-
     archiveClassifier = 'dev'
 }
 
 shadowJar {
-    destinationDirectory = file("$rootProject.rootDir/output")
-
     configurations = [project.configurations.shadowBundle]
     archiveClassifier = ''
 }
