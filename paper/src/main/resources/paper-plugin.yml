@@ -1,8 +1,8 @@
 name: BrigadierExtras
 description: Implement extra features into Brigadier, now as a Paper plugin!
-version: '1.0-SNAPSHOT'
+version: '${version}'
 main: net.nova.brigadierextras.paper.PaperBrigadierExtras
 api-version: '1.21.3'
 load: STARTUP
-authors: [NovaDev]
+authors: [Nova]
 folia-supported: true

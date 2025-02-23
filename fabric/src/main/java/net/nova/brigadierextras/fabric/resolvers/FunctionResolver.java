@@ -8,15 +8,15 @@ import net.minecraft.commands.arguments.item.FunctionArgument;
 import net.minecraft.commands.functions.CommandFunction;
 import net.nova.brigadierextras.Resolver;
 
-public class FunctionResolver implements Resolver<CommandFunction<CommandSourceStack>[], CommandSourceStack> {
+public class FunctionResolver implements Resolver<CommandFunction[], CommandSourceStack> {
     @Override
     public Class<CommandSourceStack> getExpectedSenderClass() {
         return CommandSourceStack.class;
     }
 
     @Override
-    public Class<CommandFunction<CommandSourceStack>[]> getArgumentClass() {
-        return (Class<CommandFunction<CommandSourceStack>[]>) CommandFunction[].class;
+    public Class<CommandFunction[]> getArgumentClass() {
+        return CommandFunction[].class;
     }
 
     @Override

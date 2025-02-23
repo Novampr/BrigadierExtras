@@ -43,6 +43,7 @@ import net.nova.brigadierextras.annotated.RootModifier;
 import net.nova.brigadierextras.fabric.annotated.OP;
 import net.nova.brigadierextras.fabric.annotated.Permission;
 import net.nova.brigadierextras.fabric.test.FabricCommandSender;
+import net.nova.brigadierextras.fabric.test.ShowcaseCommand;
 import net.nova.brigadierextras.fabric.test.TestCommand;
 import net.nova.brigadierextras.fabric.resolvers.*;
 import net.nova.brigadierextras.fabric.wrappers.Dimension;
@@ -153,6 +154,7 @@ public class FabricBrigadierExtras implements ModInitializer {
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             CommandRegistrationCallback.EVENT.register((commandDispatcher, commandBuildContext, commandSelection) -> {
                 CommandBuilder.registerCommand(commandDispatcher, FabricCommandSender.class, CommandSourceStack.class, FabricCommandSender::new, new TestCommand());
+                CommandBuilder.registerCommand(commandDispatcher, CommandSourceStack.class, new ShowcaseCommand());
             });
         }
     }

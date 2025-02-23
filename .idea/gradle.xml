@@ -4,14 +4,13 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
-        <option name="distributionType" value="LOCAL" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="gradleHome" value="C:/Gradle/8.10.2" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/fabric" />
             <option value="$PROJECT_DIR$/paper" />
+            <option value="$PROJECT_DIR$/velocity" />
           </set>
         </option>
       </GradleProjectSettings>

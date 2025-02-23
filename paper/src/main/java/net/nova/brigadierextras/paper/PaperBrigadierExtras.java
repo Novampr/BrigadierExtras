@@ -126,44 +126,6 @@ public final class PaperBrigadierExtras extends JavaPlugin {
         CommandBuilder.registerResolver(new EntityResolver());
         CommandBuilder.registerResolver(new EntityResolver.Multiple());
 
-        CommandBuilder.registerRootModifier(new RootModifier(1, new RootModifier.Handler() {
-            @Override
-            public <T> LiteralArgumentBuilder<T> modify(LiteralArgumentBuilder<T> argumentBuilder, Class<?> clazz) {
-                if (clazz.isAnnotationPresent(Permission.class)) {
-                    return argumentBuilder.requires(
-                            sender -> ((CommandSourceStack) sender).getSender().hasPermission(clazz.getAnnotation(Permission.class).value())
-                    );
-                }
-
-                if (clazz.isAnnotationPresent(OP.class)) {
-                    return argumentBuilder.requires(
-                            sender -> ((CommandSourceStack) sender).getSender().isOp()
-                    );
-                }
-
-                return argumentBuilder;
-            }
-        }));
-
-        CommandBuilder.registerBuilderModifier(new BranchModifier(1, new BranchModifier.Handler() {
-            @Override
-            public <T> ArgumentBuilder<T, ?> modify(ArgumentBuilder<T, ?> argumentBuilder, Method method, Class<?> clazz) {
-                if (method.isAnnotationPresent(Permission.class)) {
-                    return argumentBuilder.requires(
-                            sender -> ((CommandSourceStack) sender).getSender().hasPermission(method.getAnnotation(Permission.class).value())
-                    );
-                }
-
-                if (method.isAnnotationPresent(OP.class)) {
-                    return argumentBuilder.requires(
-                            sender -> ((CommandSourceStack) sender).getSender().isOp()
-                    );
-                }
-
-                return argumentBuilder;
-            }
-        }));
-
         CommandBuilder.registerAnnotationModifier(
                 new AnnotationModifier<>(
                         0,

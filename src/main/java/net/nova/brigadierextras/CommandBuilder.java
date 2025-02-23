@@ -35,6 +35,18 @@ public class CommandBuilder {
     }
 
     public static <S, T> void registerCommand(CommandDispatcher<S> dispatcher, Class<T> dispatcherClass, Class<S> actualDispatcherClass, Function<S, ? extends T> conv, Object command) throws InvalidCommandException {
+        for (LiteralArgumentBuilder<S> builtCommand : buildCommand(dispatcherClass, actualDispatcherClass, conv, command)) {
+            dispatcher.register(builtCommand);
+        }
+    }
+
+    public static <S> List<LiteralArgumentBuilder<S>> buildCommand(Class<S> dispatcherClass, Object command) throws InvalidCommandException {
+        return buildCommand(dispatcherClass, dispatcherClass, sender -> sender, command);
+    }
+
+    public static <S, T> List<LiteralArgumentBuilder<S>> buildCommand(Class<T> dispatcherClass, Class<S> actualDispatcherClass, Function<S, ? extends T> conv, Object command) throws InvalidCommandException {
+        List<LiteralArgumentBuilder<S>> builtCommands = new ArrayList<>();
+
         Class<?> clazz = command.getClass();
 
         if (!clazz.isAnnotationPresent(Command.class))
@@ -65,19 +77,17 @@ public class CommandBuilder {
 
                 if (method.getParameters().length == 1) {
                     //noinspection unchecked
-                    dispatcher.register(
-                            (LiteralArgumentBuilder<S>) LiteralArgumentBuilder.literal(name)
-                                    .executes(ctx -> {
-                                        try {
-                                            //noinspection unchecked
-                                            Object obj = method.invoke(command, conv.apply((S) ctx.getSource()));
-                                            return method.getReturnType() == Status.class ? ((Status) obj).getNum() : (int) obj;
-                                        } catch (IllegalAccessException | InvocationTargetException e) {
-                                            throw new RuntimeException(e);
-                                        }
-                                    })
-                    );
-                    return;
+                    builtCommands.add((LiteralArgumentBuilder<S>) LiteralArgumentBuilder.literal(name)
+                            .executes(ctx -> {
+                                try {
+                                    //noinspection unchecked
+                                    Object obj = method.invoke(command, conv.apply((S) ctx.getSource()));
+                                    return method.getReturnType() == Status.class ? ((Status) obj).getNum() : (int) obj;
+                                } catch (IllegalAccessException | InvocationTargetException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }));
+                    continue;
                 }
 
                 List<Parameter> originalParameters = Arrays.asList(method.getParameters());
@@ -263,9 +273,11 @@ public class CommandBuilder {
                     root = rootModifier.function().modify(root, clazz);
                 }
 
-                dispatcher.register(root);
+                builtCommands.add(root);
             }
         }
+
+        return Collections.unmodifiableList(builtCommands);
     }
 
     public static <T> boolean registerArgument(Class<T> type, ArgumentType<T> argumentType) {
