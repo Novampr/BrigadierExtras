@@ -13,27 +13,16 @@ public class VelocityCommandUtils {
      * Register 1 or more commands with Velocity's Brigadier
      * @param cmds The commands to register, contains metadata for velocity
      */
-    public static void register(CommandAndData... cmds) {
-        for (CommandAndData command : cmds) {
-            for (LiteralArgumentBuilder<CommandSource> cmd : CommandBuilder.buildCommand(CommandSource.class, command.command())) {
-                VelocityBrigadierExtras.getInstance().proxy.getCommandManager().register(command.meta(), new BrigadierCommand(cmd));
+    public static void register(Object plugin, Object... cmds) {
+        for (Object command : cmds) {
+            for (LiteralArgumentBuilder<CommandSource> cmd : CommandBuilder.buildCommand(CommandSource.class, command)) {
+                BrigadierCommand brigadierCommand = new BrigadierCommand(cmd);
+
+                VelocityBrigadierExtras.getInstance().proxy.getCommandManager().register(
+                        VelocityBrigadierExtras.getInstance().proxy.getCommandManager().metaBuilder(brigadierCommand).plugin(plugin).build(),
+                        brigadierCommand
+                );
             }
         }
     }
-
-    /**
-     * Register 1 or more commands with Velocity's Brigadier
-     * @param senderClass The custom sender
-     * @param translate The method to create a custom sender from a {@link CommandSource}
-     * @param cmds The commands to register, contains metadata for velocity
-     */
-    public static <T> void register(Class<T> senderClass, Function<CommandSource, T> translate, CommandAndData... cmds) {
-        for (CommandAndData command : cmds) {
-            for (LiteralArgumentBuilder<CommandSource> cmd : CommandBuilder.buildCommand(senderClass, CommandSource.class, translate, command.command())) {
-                VelocityBrigadierExtras.getInstance().proxy.getCommandManager().register(command.meta(), new BrigadierCommand(cmd));
-            }
-        }
-    }
-
-    public record CommandAndData(CommandMeta meta, Object command) {}
 }

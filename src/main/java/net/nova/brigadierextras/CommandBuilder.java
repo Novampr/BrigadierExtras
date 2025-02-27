@@ -1,15 +1,12 @@
 package net.nova.brigadierextras;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.Message;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.nova.brigadierextras.annotated.*;
 
 import java.lang.annotation.Annotation;
@@ -30,21 +27,15 @@ public class CommandBuilder {
     private static final Set<BranchModifier> BUILDER_MODIFIERS = new HashSet<>();
     private static final Set<RootModifier> ROOT_MODIFIERS = new HashSet<>();
 
-    public static <S> void registerCommand(CommandDispatcher<S> dispatcher, Class<S> dispatcherClass, Object command) throws InvalidCommandException {
-        registerCommand(dispatcher, dispatcherClass, dispatcherClass, sender -> sender, command);
-    }
+    private static final Set<SenderConversion<?, ?>> SENDER_CONVERSIONS = new HashSet<>();
 
-    public static <S, T> void registerCommand(CommandDispatcher<S> dispatcher, Class<T> dispatcherClass, Class<S> actualDispatcherClass, Function<S, ? extends T> conv, Object command) throws InvalidCommandException {
-        for (LiteralArgumentBuilder<S> builtCommand : buildCommand(dispatcherClass, actualDispatcherClass, conv, command)) {
+    public static <S> void registerCommand(CommandDispatcher<S> dispatcher, Class<S> dispatcherClass, Object command) throws InvalidCommandException {
+        for (LiteralArgumentBuilder<S> builtCommand : buildCommand(dispatcherClass, command)) {
             dispatcher.register(builtCommand);
         }
     }
 
     public static <S> List<LiteralArgumentBuilder<S>> buildCommand(Class<S> dispatcherClass, Object command) throws InvalidCommandException {
-        return buildCommand(dispatcherClass, dispatcherClass, sender -> sender, command);
-    }
-
-    public static <S, T> List<LiteralArgumentBuilder<S>> buildCommand(Class<T> dispatcherClass, Class<S> actualDispatcherClass, Function<S, ? extends T> conv, Object command) throws InvalidCommandException {
         List<LiteralArgumentBuilder<S>> builtCommands = new ArrayList<>();
 
         Class<?> clazz = command.getClass();
@@ -61,17 +52,46 @@ public class CommandBuilder {
 
         for (Method method : clazz.getDeclaredMethods()) {
             if (method.isAnnotationPresent(Path.class)) {
-                if (method.getReturnType() != int.class && method.getReturnType() != Integer.class && method.getReturnType() != Status.class) {
-                    throw new InvalidCommandException("Method must return an integer or status as a command path.");
+                if (
+                        method.getReturnType() != int.class &&
+                                method.getReturnType() != Integer.class &&
+                                method.getReturnType() != Status.class &&
+                                method.getReturnType() != void.class
+                ) {
+                    throw new InvalidCommandException("Method must return an integer, status or nothing as a command path.");
                 }
+
+                Function<Object, Integer> statusCodeGetter = (result) -> {
+                    if (result instanceof Status status) {
+                        return status.getNum();
+                    } else if (result instanceof Integer integer) {
+                        return integer;
+                    } else {
+                        return Status.SUCCESS.getNum();
+                    }
+                };
 
                 if (method.getParameters().length == 0) {
                     throw new InvalidCommandException("Path must have dispatcher source be the first parameter, current path has no parameters.");
                 }
 
+                SenderConversion<S, ?> senderConversion = new StraightPassSenderConversion<>(dispatcherClass);
+
                 if (!method.getParameters()[0].getType().equals(dispatcherClass)) {
-                    throw new InvalidCommandException("First parameter must be dispatcher source.");
+                    boolean valid = false;
+
+                    for (SenderConversion<?, ?> conversion : SENDER_CONVERSIONS) {
+                        if (method.getParameters()[0].getType().equals(conversion.getResultSender()) && dispatcherClass.equals(conversion.getSourceSender())) {
+                            valid = true;
+                            //noinspection unchecked
+                            senderConversion = (SenderConversion<S, ?>) conversion;
+                        }
+                    }
+
+                    if (!valid) throw new InvalidCommandException("First parameter must be dispatcher source.");
                 }
+
+                SenderConversion<S, ?> finalSenderConversion = senderConversion;
 
                 method.setAccessible(true);
 
@@ -81,8 +101,14 @@ public class CommandBuilder {
                             .executes(ctx -> {
                                 try {
                                     //noinspection unchecked
-                                    Object obj = method.invoke(command, conv.apply((S) ctx.getSource()));
-                                    return method.getReturnType() == Status.class ? ((Status) obj).getNum() : (int) obj;
+                                    SenderData<?> sender = finalSenderConversion.convert((S) ctx.getSource());
+
+                                    if (sender.getSender() == null) {
+                                        return sender.getStatusCode();
+                                    }
+
+                                    Object obj = method.invoke(command, sender.getSender());
+                                    return statusCodeGetter.apply(obj);
                                 } catch (IllegalAccessException | InvocationTargetException e) {
                                     throw new RuntimeException(e);
                                 }
@@ -121,9 +147,10 @@ public class CommandBuilder {
                         boolean skip = false;
 
                         for (Resolver<?, ?> resolver : RESOLVERS) {
-                            if (!resolver.getExpectedSenderClass().equals(actualDispatcherClass)) continue;
+                            if (!resolver.getExpectedSenderClass().equals(dispatcherClass)) continue;
 
                             if (resolver.getArgumentClass().equals(type)) {
+                                //noinspection unchecked
                                 argumentBuilder = (ArgumentBuilder<S, ?>) resolver.generateArgumentBuilder(parameter.getName());
                                 skip = true;
                             }
@@ -144,9 +171,15 @@ public class CommandBuilder {
                 }
 
                 argumentBuilder = argumentBuilder.executes((ctx) -> {
+                    SenderData<?> senderData = finalSenderConversion.convert(ctx.getSource());
+
+                    if (senderData.getSender() == null) {
+                        return senderData.getStatusCode();
+                    }
+
                     List<Object> providedArguments = new ArrayList<>();
 
-                    providedArguments.add(conv.apply(ctx.getSource()));
+                    providedArguments.add(senderData.getSender());
 
                     for (Parameter parameter1 : parameters) {
                         Class<?> claz = parameter1.getType();
@@ -169,9 +202,10 @@ public class CommandBuilder {
                                 boolean skip = false;
 
                                 for (Resolver<?, ?> resolver : RESOLVERS) {
-                                    if (!resolver.getExpectedSenderClass().equals(actualDispatcherClass)) continue;
+                                    if (!resolver.getExpectedSenderClass().equals(dispatcherClass)) continue;
 
                                     if (resolver.getArgumentClass().equals(claz)) {
+                                        //noinspection unchecked
                                         providedArguments.add(((Resolver<?, S>) resolver).getType(ctx, parameter1.getName()));
                                         skip = true;
                                     }
@@ -190,7 +224,7 @@ public class CommandBuilder {
 
                     try {
                         Object obj = method.invoke(command, providedArguments.toArray());
-                        return method.getReturnType() == Status.class ? ((Status) obj).getNum() : (int) obj;
+                        return statusCodeGetter.apply(obj);
                     } catch (IllegalAccessException | InvocationTargetException e) {
                         throw new RuntimeException(e);
                     }
@@ -234,7 +268,7 @@ public class CommandBuilder {
                         boolean skip = false;
 
                         for (Resolver<?, ?> resolver : RESOLVERS) {
-                            if (!resolver.getExpectedSenderClass().equals(actualDispatcherClass)) continue;
+                            if (!resolver.getExpectedSenderClass().equals(dispatcherClass)) continue;
 
                             if (resolver.getArgumentClass().equals(aClass)) {
                                 if (argumentBuilder != null) {
@@ -280,6 +314,7 @@ public class CommandBuilder {
         return Collections.unmodifiableList(builtCommands);
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public static <T> boolean registerArgument(Class<T> type, ArgumentType<T> argumentType) {
         return registerArgument(type, argumentType, false);
     }
@@ -293,6 +328,7 @@ public class CommandBuilder {
         return true;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public static <T, S> boolean registerArgument(Class<T> type, ArgumentType<S> argumentType, Function<S, T> function) {
         return registerArgument(type, argumentType, function, false);
     }
@@ -321,6 +357,7 @@ public class CommandBuilder {
             @Override
             public <T> ArgumentBuilder<T, ?> modify(ArgumentBuilder<T, ?> argumentBuilder, Method method, Class<?> clazz) {
                 if (method.isAnnotationPresent(annotationModifier.annotationClass())) {
+                    //noinspection unchecked
                     return (ArgumentBuilder<T, ?>) annotationModifier.handler().modify(argumentBuilder, method.getAnnotation(annotationModifier.annotationClass()));
                 }
 
@@ -332,6 +369,7 @@ public class CommandBuilder {
             @Override
             public <T> LiteralArgumentBuilder<T> modify(LiteralArgumentBuilder<T> argumentBuilder, Class<?> clazz) {
                 if (clazz.isAnnotationPresent(annotationModifier.annotationClass())) {
+                    //noinspection unchecked
                     return (LiteralArgumentBuilder<T>) annotationModifier.handler().modify(argumentBuilder, clazz.getAnnotation(annotationModifier.annotationClass()));
                 }
 
@@ -342,5 +380,9 @@ public class CommandBuilder {
 
     public static <T, S> void registerResolver(Resolver<T, S> resolver) {
         RESOLVERS.add(resolver);
+    }
+
+    public static <T, S> void registerSenderConversion(SenderConversion<T, S> conversion) {
+        SENDER_CONVERSIONS.add(conversion);
     }
 }

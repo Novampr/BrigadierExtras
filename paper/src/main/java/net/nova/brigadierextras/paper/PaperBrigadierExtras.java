@@ -1,8 +1,6 @@
 package net.nova.brigadierextras.paper;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
-import com.mojang.brigadier.builder.ArgumentBuilder;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -23,11 +21,16 @@ import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.chat.SignedMessage;
 import net.nova.brigadierextras.Resolver;
 import net.nova.brigadierextras.annotated.AnnotationModifier;
+import net.nova.brigadierextras.annotated.SenderConversion;
+import net.nova.brigadierextras.annotated.SenderData;
 import net.nova.brigadierextras.paper.annotated.OP;
 import net.nova.brigadierextras.paper.annotated.Permission;
 import net.nova.brigadierextras.paper.resolvers.EntityResolver;
 import net.nova.brigadierextras.paper.resolvers.PlayerResolver;
 import net.nova.brigadierextras.paper.resolvers.ResolverResolver;
+import net.nova.brigadierextras.paper.senders.CommandSenderSender;
+import net.nova.brigadierextras.paper.senders.EntitySender;
+import net.nova.brigadierextras.paper.senders.PlayerSender;
 import net.nova.brigadierextras.paper.test.PaperCommandSender;
 import net.nova.brigadierextras.paper.test.TestCommand;
 import net.nova.brigadierextras.paper.wrappers.Time;
@@ -37,8 +40,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.nova.brigadierextras.BrigadierExtras;
 import net.nova.brigadierextras.CommandBuilder;
-import net.nova.brigadierextras.annotated.BranchModifier;
-import net.nova.brigadierextras.annotated.RootModifier;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Biome;
@@ -64,16 +65,16 @@ import org.bukkit.potion.PotionType;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
 
-import java.lang.reflect.Method;
-import java.util.Collection;
 import java.util.UUID;
 
 @SuppressWarnings("UnstableApiUsage")
 public final class PaperBrigadierExtras extends JavaPlugin {
     @Override
     public void onEnable() {
+        // Init BrigadierExtras default types
         BrigadierExtras.init();
 
+        // Register arguments found in ArgumentTypes
         CommandBuilder.registerArgument(BlockState.class, ArgumentTypes.blockState());
         CommandBuilder.registerArgument(ItemStack.class, ArgumentTypes.itemStack());
         CommandBuilder.registerArgument(ItemStackPredicate.class, ArgumentTypes.itemPredicate());
@@ -95,6 +96,7 @@ public final class PaperBrigadierExtras extends JavaPlugin {
         CommandBuilder.registerArgument(Mirror.class, ArgumentTypes.templateMirror());
         CommandBuilder.registerArgument(StructureRotation.class, ArgumentTypes.templateRotation());
 
+        // Register all Registry based arguments
         CommandBuilder.registerArgument(GameEvent.class, ArgumentTypes.resource(RegistryKey.GAME_EVENT));
         CommandBuilder.registerArgument(StructureType.class, ArgumentTypes.resource(RegistryKey.STRUCTURE_TYPE));
         CommandBuilder.registerArgument(PotionEffectType.class, ArgumentTypes.resource(RegistryKey.MOB_EFFECT));
@@ -125,25 +127,23 @@ public final class PaperBrigadierExtras extends JavaPlugin {
         CommandBuilder.registerArgument(Particle.class, ArgumentTypes.resource(RegistryKey.PARTICLE_TYPE));
         CommandBuilder.registerArgument(PotionType.class, ArgumentTypes.resource(RegistryKey.POTION));
 
+        // Register resolvers for certain types that need resolving
         CommandBuilder.registerResolver(new ResolverResolver<>(
                 ArgumentTypes.playerProfiles(),
                 PlayerProfileListResolver.class,
                 PlayerProfile[].class,
                 collection -> collection.toArray(new PlayerProfile[]{})
         ));
-
         CommandBuilder.registerResolver(new ResolverResolver<>(
                 ArgumentTypes.blockPosition(),
                 BlockPositionResolver.class,
                 BlockPosition.class
         ));
-
         CommandBuilder.registerResolver(new ResolverResolver<>(
                 ArgumentTypes.finePosition(),
                 FinePositionResolver.class,
                 FinePosition.class
         ));
-
         CommandBuilder.registerResolver(new Resolver<SignedMessage, CommandSourceStack>() {
             @Override
             public Class<CommandSourceStack> getExpectedSenderClass() {
@@ -165,12 +165,12 @@ public final class PaperBrigadierExtras extends JavaPlugin {
                 return context.getArgument(name, SignedMessageResolver.class).resolveSignedMessage(name, context).join();
             }
         });
-
         CommandBuilder.registerResolver(new PlayerResolver());
         CommandBuilder.registerResolver(new PlayerResolver.Multiple());
         CommandBuilder.registerResolver(new EntityResolver());
         CommandBuilder.registerResolver(new EntityResolver.Multiple());
 
+        // Register OP annotation modifier
         CommandBuilder.registerAnnotationModifier(
                 new AnnotationModifier<>(
                         0,
@@ -182,6 +182,7 @@ public final class PaperBrigadierExtras extends JavaPlugin {
                 )
         );
 
+        // Register Permission annotation modifier
         CommandBuilder.registerAnnotationModifier(
                 new AnnotationModifier<>(
                         1,
@@ -193,8 +194,34 @@ public final class PaperBrigadierExtras extends JavaPlugin {
                 )
         );
 
+        // Register Bukkit CommandSender conversion, allows use of CommandSender
+        CommandBuilder.registerSenderConversion(new CommandSenderSender());
+
+        // Register Player conversion, can only be run as a Player
+        CommandBuilder.registerSenderConversion(new PlayerSender());
+
+        // Register Entity conversion, can only be run as an Entity, includes Players
+        CommandBuilder.registerSenderConversion(new EntitySender());
+
         if (System.getProperty("be.test", "nope").equals("TESTMEPLEASE")) {
-            PaperCommandUtils.register(this, PaperCommandSender.class, PaperCommandSender::new, new TestCommand());
+            CommandBuilder.registerSenderConversion(new SenderConversion<CommandSourceStack, PaperCommandSender>() {
+                @Override
+                public Class<CommandSourceStack> getSourceSender() {
+                    return CommandSourceStack.class;
+                }
+
+                @Override
+                public Class<PaperCommandSender> getResultSender() {
+                    return PaperCommandSender.class;
+                }
+
+                @Override
+                public SenderData<PaperCommandSender> convert(CommandSourceStack sender) {
+                    return SenderData.ofSender(new PaperCommandSender(sender));
+                }
+            });
+
+            PaperCommandUtils.register(this, new TestCommand());
         }
     }
 

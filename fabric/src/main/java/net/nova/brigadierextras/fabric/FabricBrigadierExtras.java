@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -36,10 +37,7 @@ import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import net.nova.brigadierextras.BrigadierExtras;
 import net.nova.brigadierextras.CommandBuilder;
-import net.nova.brigadierextras.annotated.AnnotationModifier;
-import net.nova.brigadierextras.annotated.BranchModifier;
-import net.nova.brigadierextras.annotated.Command;
-import net.nova.brigadierextras.annotated.RootModifier;
+import net.nova.brigadierextras.annotated.*;
 import net.nova.brigadierextras.fabric.annotated.OP;
 import net.nova.brigadierextras.fabric.annotated.Permission;
 import net.nova.brigadierextras.fabric.test.FabricCommandSender;
@@ -118,13 +116,9 @@ public class FabricBrigadierExtras implements ModInitializer {
                         (argumentBuilder, op) -> {
                             int opValue;
 
-                            try {
-                                if (minecraftServer instanceof DedicatedServer dedicatedServer) {
-                                    opValue = dedicatedServer.getProperties().opPermissionLevel;
-                                } else {
-                                    opValue = 4;
-                                }
-                            } catch (Exception e) { // Honestly not sure what happens on the Integrated Server if I referance Dedi, lets not find out
+                            if (minecraftServer != null && minecraftServer.isDedicatedServer()) {
+                                opValue = ((DedicatedServer) minecraftServer).getProperties().opPermissionLevel;
+                            } else {
                                 opValue = 4;
                             }
 
@@ -153,7 +147,24 @@ public class FabricBrigadierExtras implements ModInitializer {
 
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             CommandRegistrationCallback.EVENT.register((commandDispatcher, commandBuildContext, commandSelection) -> {
-                CommandBuilder.registerCommand(commandDispatcher, FabricCommandSender.class, CommandSourceStack.class, FabricCommandSender::new, new TestCommand());
+                CommandBuilder.registerSenderConversion(new SenderConversion<CommandSourceStack, FabricCommandSender>() {
+                    @Override
+                    public Class<CommandSourceStack> getSourceSender() {
+                        return CommandSourceStack.class;
+                    }
+
+                    @Override
+                    public Class<FabricCommandSender> getResultSender() {
+                        return FabricCommandSender.class;
+                    }
+
+                    @Override
+                    public SenderData<FabricCommandSender> convert(CommandSourceStack sender) {
+                        return SenderData.ofSender(new FabricCommandSender(sender));
+                    }
+                });
+
+                CommandBuilder.registerCommand(commandDispatcher, CommandSourceStack.class, new TestCommand());
                 CommandBuilder.registerCommand(commandDispatcher, CommandSourceStack.class, new ShowcaseCommand());
             });
         }

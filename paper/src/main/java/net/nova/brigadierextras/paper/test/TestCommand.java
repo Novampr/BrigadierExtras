@@ -1,6 +1,5 @@
 package net.nova.brigadierextras.paper.test;
 
-import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.nova.brigadierextras.Status;
 import net.nova.brigadierextras.paper.annotated.OP;
 import net.kyori.adventure.text.Component;
