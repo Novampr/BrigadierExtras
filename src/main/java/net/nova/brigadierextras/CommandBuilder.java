@@ -21,6 +21,7 @@ public class CommandBuilder {
 
     private static final Map<Class<?>, ArgumentType<?>> ARGUMENTS = new HashMap<>();
     private static final Map<Class<?>, Function<Object, ?>> MODIFIERS = new HashMap<>();
+    private static final Map<Class<?>, Class<?>> CLASS_MAP = new HashMap<>();
 
     private static final Set<Resolver<?, ?>> RESOLVERS = new HashSet<>();
 
@@ -137,8 +138,12 @@ public class CommandBuilder {
                     //noinspection unchecked
                     argumentBuilder = (ArgumentBuilder<S, ?>) RequiredArgumentBuilder.argument(parameter.getName(), StringArgumentType.word())
                             .suggests((context, builder) -> {
+                                EnumStyle<Enum<?>> styling = Enum::name;
                                 for (Enum<?> enu : enums) {
-                                    builder.suggest(enu.name());
+                                    if (enu instanceof EnumStyle<?> enumStyle) {
+                                        styling = (EnumStyle<Enum<?>>) enumStyle;
+                                    }
+                                    if (styling.style(enu).startsWith(builder.getRemaining())) builder.suggest(styling.style(enu));
                                 }
                                 return builder.buildFuture();
                             });
@@ -190,8 +195,15 @@ public class CommandBuilder {
                             Enum<?>[] enums = (Enum<?>[]) claz.getEnumConstants();
                             boolean added = false;
                             String value = ctx.getArgument(parameter1.getName(), String.class);
+
+                            EnumStyle<Enum<?>> styling = Enum::name;
+
                             for (Enum<?> enu : enums) {
-                                if (enu.name().equals(value)) {
+                                if (enu instanceof EnumStyle<?> enumStyle) {
+                                    styling = (EnumStyle<Enum<?>>) enumStyle;
+                                }
+
+                                if (styling.style(enu).equals(value)) {
                                     providedArguments.add(enu);
                                     added = true;
                                 }
@@ -213,8 +225,10 @@ public class CommandBuilder {
 
                                 if (!skip) throw new InvalidCommandException("Invalid argument type given.");
                             } else if (MODIFIERS.containsKey(claz)) {
-                                providedArguments.add(MODIFIERS.get(claz).apply(
-                                        ctx.getArgument(parameter1.getName(), claz))
+                                providedArguments.add(
+                                        MODIFIERS.get(claz).apply(
+                                                ctx.getArgument(parameter1.getName(), CLASS_MAP.get(claz))
+                                        )
                                 );
                             } else {
                                 providedArguments.add(ctx.getArgument(parameter1.getName(), claz));
@@ -248,8 +262,12 @@ public class CommandBuilder {
                             //noinspection unchecked
                             argumentBuilder = (ArgumentBuilder<S, ?>) RequiredArgumentBuilder.argument(p.getName(), StringArgumentType.word())
                                     .suggests((context, builder) -> {
+                                        EnumStyle<Enum<?>> styling = Enum::name;
                                         for (Enum<?> enu : enums) {
-                                            builder.suggest(enu.name());
+                                            if (enu instanceof EnumStyle<?> enumStyle) {
+                                                styling = (EnumStyle<Enum<?>>) enumStyle;
+                                            }
+                                            if (styling.style(enu).startsWith(builder.getRemaining())) builder.suggest(styling.style(enu));
                                         }
                                         return builder.buildFuture();
                                     })
@@ -258,8 +276,12 @@ public class CommandBuilder {
                             //noinspection unchecked
                             argumentBuilder = (ArgumentBuilder<S, ?>) RequiredArgumentBuilder.argument(p.getName(), StringArgumentType.word())
                                     .suggests((context, builder) -> {
+                                        EnumStyle<Enum<?>> styling = Enum::name;
                                         for (Enum<?> enu : enums) {
-                                            builder.suggest(enu.name());
+                                            if (enu instanceof EnumStyle<?> enumStyle) {
+                                                styling = (EnumStyle<Enum<?>>) enumStyle;
+                                            }
+                                            if (styling.style(enu).startsWith(builder.getRemaining())) builder.suggest(styling.style(enu));
                                         }
                                         return builder.buildFuture();
                                     });
@@ -329,11 +351,11 @@ public class CommandBuilder {
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    public static <T, S> boolean registerArgument(Class<T> type, ArgumentType<S> argumentType, Function<S, T> function) {
-        return registerArgument(type, argumentType, function, false);
+    public static <T, S> boolean registerArgument(Class<T> type, Class<S> argType, ArgumentType<S> argumentType, Function<S, T> function) {
+        return registerArgument(type, argType, argumentType, function, false);
     }
 
-    public static <T, S> boolean registerArgument(Class<T> type, ArgumentType<S> argumentType, Function<S, T> function, boolean force) {
+    public static <T, S> boolean registerArgument(Class<T> type, Class<S> argType, ArgumentType<S> argumentType, Function<S, T> function, boolean force) {
         if (MODIFIERS.containsKey(type) ) {
             if (!force) return false;
         }
@@ -341,6 +363,7 @@ public class CommandBuilder {
         ARGUMENTS.put(type, argumentType);
         //noinspection unchecked
         MODIFIERS.put(type, (Function<Object, ?>) function);
+        CLASS_MAP.put(type, argType);
         return true;
     }
 

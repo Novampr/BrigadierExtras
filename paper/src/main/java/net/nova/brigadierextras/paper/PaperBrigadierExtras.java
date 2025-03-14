@@ -92,7 +92,7 @@ public final class PaperBrigadierExtras extends JavaPlugin {
         CommandBuilder.registerArgument(UUID.class, ArgumentTypes.uuid());
         CommandBuilder.registerArgument(Criteria.class, ArgumentTypes.objectiveCriteria());
         CommandBuilder.registerArgument(LookAnchor.class, ArgumentTypes.entityAnchor());
-        CommandBuilder.registerArgument(Time.class, ArgumentTypes.time(), Time::new);
+        CommandBuilder.registerArgument(Time.class, Integer.class, ArgumentTypes.time(), Time::new);
         CommandBuilder.registerArgument(Mirror.class, ArgumentTypes.templateMirror());
         CommandBuilder.registerArgument(StructureRotation.class, ArgumentTypes.templateRotation());
 
@@ -111,7 +111,13 @@ public final class PaperBrigadierExtras extends JavaPlugin {
         CommandBuilder.registerArgument(Attribute.class, ArgumentTypes.resource(RegistryKey.ATTRIBUTE));
         CommandBuilder.registerArgument(Fluid.class, ArgumentTypes.resource(RegistryKey.FLUID));
         CommandBuilder.registerArgument(Sound.class, ArgumentTypes.resource(RegistryKey.SOUND_EVENT));
-        CommandBuilder.registerArgument(DataComponentType.class, ArgumentTypes.resource(RegistryKey.DATA_COMPONENT_TYPE));
+
+        try {
+            CommandBuilder.registerArgument(DataComponentType.class, ArgumentTypes.resource(RegistryKey.DATA_COMPONENT_TYPE));
+        } catch (NoClassDefFoundError e) {
+            getLogger().warning("DataComponentType was not registered. If you are on 1.21.1 or below, this is safe to ignore.");
+        }
+
         CommandBuilder.registerArgument(Biome.class, ArgumentTypes.resource(RegistryKey.BIOME));
         CommandBuilder.registerArgument(Structure.class, ArgumentTypes.resource(RegistryKey.STRUCTURE));
         CommandBuilder.registerArgument(TrimMaterial.class, ArgumentTypes.resource(RegistryKey.TRIM_MATERIAL));

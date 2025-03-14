@@ -2,12 +2,10 @@ package net.nova.brigadierextras.fabric;
 
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -16,7 +14,6 @@ import net.minecraft.commands.arguments.blocks.BlockInput;
 import net.minecraft.commands.arguments.blocks.BlockPredicateArgument;
 import net.minecraft.commands.arguments.blocks.BlockStateArgument;
 import net.minecraft.commands.arguments.coordinates.*;
-import net.minecraft.commands.arguments.item.FunctionArgument;
 import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.commands.arguments.item.ItemInput;
 import net.minecraft.commands.arguments.item.ItemPredicateArgument;
@@ -69,7 +66,7 @@ public class FabricBrigadierExtras implements ModInitializer {
         CommandBuilder.registerArgument(ChatFormatting.class, ColorArgument.color());
         CommandBuilder.registerArgument(Component.class, ComponentArgument.textComponent(context));
         CommandBuilder.registerArgument(CompoundTag.class, CompoundTagArgument.compoundTag());
-        CommandBuilder.registerArgument(Dimension.class, DimensionArgument.dimension(), Dimension::new);
+        CommandBuilder.registerArgument(Dimension.class, ResourceLocation.class, DimensionArgument.dimension(), Dimension::new);
         CommandBuilder.registerArgument(EntityAnchorArgument.Anchor.class, EntityAnchorArgument.anchor());
         CommandBuilder.registerArgument(GameType.class, GameModeArgument.gameMode());
         CommandBuilder.registerArgument(Heightmap.Types.class, HeightmapTypeArgument.heightmap());
@@ -81,7 +78,7 @@ public class FabricBrigadierExtras implements ModInitializer {
         CommandBuilder.registerArgument(ParticleOptions.class, ParticleArgument.particle(context));
         CommandBuilder.registerArgument(ResourceLocation.class, ResourceLocationArgument.id());
         CommandBuilder.registerArgument(DisplaySlot.class, ScoreboardSlotArgument.displaySlot());
-        CommandBuilder.registerArgument(Slot.class, SlotArgument.slot(), Slot::new);
+        CommandBuilder.registerArgument(Slot.class, Integer.class, SlotArgument.slot(), Slot::new);
         CommandBuilder.registerArgument(SlotRange.class, SlotsArgument.slots());
         CommandBuilder.registerArgument(Style.class, StyleArgument.style(context));
         CommandBuilder.registerArgument(Mirror.class, TemplateMirrorArgument.templateMirror());
@@ -89,10 +86,10 @@ public class FabricBrigadierExtras implements ModInitializer {
         CommandBuilder.registerArgument(UUID.class, UuidArgument.uuid());
         CommandBuilder.registerArgument(BlockPredicateArgument.Result.class, BlockPredicateArgument.blockPredicate(context));
         CommandBuilder.registerArgument(BlockInput.class, BlockStateArgument.block(context));
-        CommandBuilder.registerArgument(Rotation.class, RotationArgument.rotation(), Rotation::new);
+        CommandBuilder.registerArgument(Rotation.class, Coordinates.class, RotationArgument.rotation(), Rotation::new);
         CommandBuilder.registerArgument(ItemInput.class, ItemArgument.item(context));
         CommandBuilder.registerArgument(ItemPredicateArgument.Result.class, ItemPredicateArgument.itemPredicate(context));
-        CommandBuilder.registerArgument(Time.class, TimeArgument.time(), Time::new);
+        CommandBuilder.registerArgument(Time.class, Integer.class, TimeArgument.time(), Time::new);
 
         CommandBuilder.registerResolver(new BlockPosResolver());
         CommandBuilder.registerResolver(new ColumnPosResolver());
