@@ -8,6 +8,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.nova.brigadierextras.annotated.*;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -17,6 +18,8 @@ import java.util.*;
 import java.util.function.Function;
 
 public class CommandBuilder {
+    private static final Map<Object, List<LiteralArgumentBuilder<?>>> ALREADY_DONE = new HashMap<>();
+
     public static final SimpleCommandExceptionType INVALID_ENUM = new SimpleCommandExceptionType(() -> "Invalid enum constant.");
 
     private static final Map<Class<?>, ArgumentType<?>> ARGUMENTS = new HashMap<>();
@@ -37,7 +40,18 @@ public class CommandBuilder {
     }
 
     public static <S> List<LiteralArgumentBuilder<S>> buildCommand(Class<S> dispatcherClass, Object command) throws InvalidCommandException {
+        if (ALREADY_DONE.containsKey(command)) {
+            List<LiteralArgumentBuilder<S>> NEW_HACK_LIST = new ArrayList<>();
+
+            for (LiteralArgumentBuilder<?> argumentBuilder : ALREADY_DONE.get(command)) {
+                NEW_HACK_LIST.add((LiteralArgumentBuilder<S>) argumentBuilder);
+            }
+
+            return Collections.unmodifiableList(NEW_HACK_LIST);
+        }
+
         List<LiteralArgumentBuilder<S>> builtCommands = new ArrayList<>();
+        List<String> redirects = new ArrayList<>();
 
         Class<?> clazz = command.getClass();
 
@@ -46,7 +60,23 @@ public class CommandBuilder {
 
         Command command1 = clazz.getAnnotation(Command.class);
 
-        String name = command1.value();
+        String[] names = command1.value();
+
+        String name;
+
+        if (names.length == 0) {
+            throw new InvalidCommandException("No name was provided for this command.");
+        } else if (names.length == 1) {
+            name = names[0];
+        } else {
+            name = names[0];
+
+            for (String n : names) {
+                if (n.equals(name)) continue;
+
+                redirects.add(n);
+            }
+        }
 
         if (!name.matches("[a-zA-Z]+"))
             throw new InvalidCommandException("Command must only have alphabetical characters in the name.");
@@ -114,6 +144,26 @@ public class CommandBuilder {
                                     throw new RuntimeException(e);
                                 }
                             }));
+
+                    for (String redirect : redirects) {
+                        //noinspection unchecked
+                        builtCommands.add((LiteralArgumentBuilder<S>) LiteralArgumentBuilder.literal(redirect)
+                                .executes(ctx -> {
+                                    try {
+                                        //noinspection unchecked
+                                        SenderData<?> sender = finalSenderConversion.convert((S) ctx.getSource());
+
+                                        if (sender.getSender() == null) {
+                                            return sender.getStatusCode();
+                                        }
+
+                                        Object obj = method.invoke(command, sender.getSender());
+                                        return statusCodeGetter.apply(obj);
+                                    } catch (IllegalAccessException | InvocationTargetException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }));
+                    }
                     continue;
                 }
 
@@ -126,46 +176,9 @@ public class CommandBuilder {
 
                 Parameter parameter = reversedParameters.getFirst();
 
-                ArgumentBuilder<S, ?> argumentBuilder = null;
+                ArgumentBuilder<S, ?> argumentBuilder;
 
-                Class<?> type = parameter.getType();
-
-                if (type.isAssignableFrom(Literal.class)) {
-                    argumentBuilder = LiteralArgumentBuilder.literal(parameter.getName());
-                } else if (type.isEnum() && !ARGUMENTS.containsKey(type)) {
-                    Enum<?>[] enums = (Enum<?>[]) type.getEnumConstants();
-
-                    //noinspection unchecked
-                    argumentBuilder = (ArgumentBuilder<S, ?>) RequiredArgumentBuilder.argument(parameter.getName(), StringArgumentType.word())
-                            .suggests((context, builder) -> {
-                                EnumStyle<Enum<?>> styling = Enum::name;
-                                for (Enum<?> enu : enums) {
-                                    if (enu instanceof EnumStyle<?> enumStyle) {
-                                        styling = (EnumStyle<Enum<?>>) enumStyle;
-                                    }
-                                    if (styling.style(enu).startsWith(builder.getRemaining())) builder.suggest(styling.style(enu));
-                                }
-                                return builder.buildFuture();
-                            });
-                } else {
-                    if (!ARGUMENTS.containsKey(type)) {
-                        boolean skip = false;
-
-                        for (Resolver<?, ?> resolver : RESOLVERS) {
-                            if (!resolver.getExpectedSenderClass().equals(dispatcherClass)) continue;
-
-                            if (resolver.getArgumentClass().equals(type)) {
-                                //noinspection unchecked
-                                argumentBuilder = (ArgumentBuilder<S, ?>) resolver.generateArgumentBuilder(parameter.getName());
-                                skip = true;
-                            }
-                        }
-
-                        if (!skip) throw new InvalidCommandException("Invalid argument type given.");
-                    } else {
-                        argumentBuilder = RequiredArgumentBuilder.argument(parameter.getName(), ARGUMENTS.get(type));
-                    }
-                }
+                argumentBuilder = createArgumentBuilder(dispatcherClass, parameter.getType(), parameter.getName(), null);
 
                 List<BranchModifier> modifiers = new ArrayList<>(BUILDER_MODIFIERS);
 
@@ -189,27 +202,39 @@ public class CommandBuilder {
                     for (Parameter parameter1 : parameters) {
                         Class<?> claz = parameter1.getType();
 
+                        boolean checkArgRes = true;
+
                         if (claz.isAssignableFrom(Literal.class)) {
                             providedArguments.add(new Literal(parameter1.getName()));
+                            checkArgRes = false;
                         } else if (claz.isEnum() && !ARGUMENTS.containsKey(claz)) {
-                            Enum<?>[] enums = (Enum<?>[]) claz.getEnumConstants();
-                            boolean added = false;
-                            String value = ctx.getArgument(parameter1.getName(), String.class);
+                            boolean doStandardEnumBehaviour = true;
 
-                            EnumStyle<Enum<?>> styling = Enum::name;
-
-                            for (Enum<?> enu : enums) {
-                                if (enu instanceof EnumStyle<?> enumStyle) {
-                                    styling = (EnumStyle<Enum<?>>) enumStyle;
-                                }
-
-                                if (styling.style(enu).equals(value)) {
-                                    providedArguments.add(enu);
-                                    added = true;
-                                }
+                            for (Resolver<?, ?> resolver : RESOLVERS) {
+                                if (resolver.getArgumentClass().equals(claz)) doStandardEnumBehaviour = false;
                             }
-                            if (!added) throw INVALID_ENUM.create();
-                        } else {
+
+                            if (doStandardEnumBehaviour) {
+                                Enum<?>[] enums = (Enum<?>[]) claz.getEnumConstants();
+                                boolean added = false;
+                                String value = ctx.getArgument(parameter1.getName(), String.class);
+
+                                for (Enum<?> enu : enums) {
+                                    if (enu instanceof EnumStyle enumStyle && enumStyle.style().equals(value)) {
+                                        providedArguments.add(enu);
+                                        added = true;
+                                    } else if (enu.name().equals(value)) {
+                                        providedArguments.add(enu);
+                                        added = true;
+                                    }
+                                }
+                                if (!added) throw INVALID_ENUM.create();
+
+                                checkArgRes = false;
+                            }
+                        }
+
+                        if (checkArgRes) {
                             if (!ARGUMENTS.containsKey(claz)) {
                                 boolean skip = false;
 
@@ -247,70 +272,7 @@ public class CommandBuilder {
                 reversedParameters.removeFirst();
 
                 for (Parameter p : reversedParameters) {
-                    Class<?> aClass = p.getType();
-
-                    if (aClass.isAssignableFrom(Literal.class)) {
-                        if (argumentBuilder != null) {
-                            //noinspection unchecked
-                            argumentBuilder = (ArgumentBuilder<S, ?>) LiteralArgumentBuilder.literal(p.getName()).then((ArgumentBuilder<Object, ?>) argumentBuilder);
-                        } else {
-                            argumentBuilder = LiteralArgumentBuilder.literal(p.getName());
-                        }
-                    } else if (aClass.isEnum() && !ARGUMENTS.containsKey(aClass)) {
-                        Enum<?>[] enums = (Enum<?>[]) aClass.getEnumConstants();
-                        if (argumentBuilder != null) {
-                            //noinspection unchecked
-                            argumentBuilder = (ArgumentBuilder<S, ?>) RequiredArgumentBuilder.argument(p.getName(), StringArgumentType.word())
-                                    .suggests((context, builder) -> {
-                                        EnumStyle<Enum<?>> styling = Enum::name;
-                                        for (Enum<?> enu : enums) {
-                                            if (enu instanceof EnumStyle<?> enumStyle) {
-                                                styling = (EnumStyle<Enum<?>>) enumStyle;
-                                            }
-                                            if (styling.style(enu).startsWith(builder.getRemaining())) builder.suggest(styling.style(enu));
-                                        }
-                                        return builder.buildFuture();
-                                    })
-                                    .then((ArgumentBuilder<Object, ?>) argumentBuilder);
-                        } else {
-                            //noinspection unchecked
-                            argumentBuilder = (ArgumentBuilder<S, ?>) RequiredArgumentBuilder.argument(p.getName(), StringArgumentType.word())
-                                    .suggests((context, builder) -> {
-                                        EnumStyle<Enum<?>> styling = Enum::name;
-                                        for (Enum<?> enu : enums) {
-                                            if (enu instanceof EnumStyle<?> enumStyle) {
-                                                styling = (EnumStyle<Enum<?>>) enumStyle;
-                                            }
-                                            if (styling.style(enu).startsWith(builder.getRemaining())) builder.suggest(styling.style(enu));
-                                        }
-                                        return builder.buildFuture();
-                                    });
-                        }
-                    } else if (!ARGUMENTS.containsKey(aClass)) {
-                        boolean skip = false;
-
-                        for (Resolver<?, ?> resolver : RESOLVERS) {
-                            if (!resolver.getExpectedSenderClass().equals(dispatcherClass)) continue;
-
-                            if (resolver.getArgumentClass().equals(aClass)) {
-                                if (argumentBuilder != null) {
-                                    //noinspection unchecked
-                                    argumentBuilder = ((Resolver<?, S>) resolver).generateArgumentBuilder(p.getName()).then(argumentBuilder);
-                                } else {
-                                    //noinspection unchecked
-                                    argumentBuilder = ((Resolver<?, S>) resolver).generateArgumentBuilder(p.getName());
-                                }
-                                skip = true;
-                            }
-                        }
-
-                        if (!skip) throw new InvalidCommandException("Invalid argument type given.");
-                    } else if (argumentBuilder != null) {
-                        //noinspection unchecked
-                        argumentBuilder = (ArgumentBuilder<S, ?>) RequiredArgumentBuilder.argument(p.getName(), ARGUMENTS.get(aClass)).then((ArgumentBuilder<Object, ?>) argumentBuilder);
-                    } else {
-                        argumentBuilder = RequiredArgumentBuilder.argument(p.getName(), ARGUMENTS.get(aClass));
-                    }
+                    argumentBuilder = createArgumentBuilder(dispatcherClass, p.getType(), p.getName(), argumentBuilder);
 
                     for (BranchModifier branchModifier : modifiers) {
                         argumentBuilder = branchModifier.function().modify(argumentBuilder, method, clazz);
@@ -330,10 +292,84 @@ public class CommandBuilder {
                 }
 
                 builtCommands.add(root);
+
+                for (String redirect : redirects) {
+                    //noinspection unchecked
+                    LiteralArgumentBuilder<S> r = (LiteralArgumentBuilder<S>) LiteralArgumentBuilder.literal(redirect)
+                            .then((ArgumentBuilder<Object, ?>) argumentBuilder);
+
+                    List<RootModifier> rM = new ArrayList<>(ROOT_MODIFIERS);
+
+                    rM.sort(Comparator.comparingInt(RootModifier::priority));
+
+                    for (RootModifier rootModifier : rM) {
+                        r = rootModifier.function().modify(r, clazz);
+                    }
+                }
             }
         }
 
-        return Collections.unmodifiableList(builtCommands);
+        List<LiteralArgumentBuilder<S>> finalBuiltCommands = Collections.unmodifiableList(builtCommands);
+
+        List<LiteralArgumentBuilder<?>> HACKS_AGAIN = new ArrayList<>(finalBuiltCommands);
+
+        ALREADY_DONE.put(command, HACKS_AGAIN);
+
+        return finalBuiltCommands;
+    }
+
+    private static <S> ArgumentBuilder<S, ?> createArgumentBuilder(Class<?> dispatcherClass, Class<?> parameterClass, String argumentName, @Nullable ArgumentBuilder<S, ?> previousArgumentBuilder) throws InvalidCommandException {
+        ArgumentBuilder<S, ?> argumentBuilder = null;
+
+        if (parameterClass.isAssignableFrom(Literal.class)) {
+            argumentBuilder = LiteralArgumentBuilder.literal(argumentName);
+        } else if (ARGUMENTS.containsKey(parameterClass)) {
+            argumentBuilder = RequiredArgumentBuilder.argument(argumentName, ARGUMENTS.get(parameterClass));
+        } else {
+            boolean resolverInUse = false;
+
+            for (Resolver<?, ?> resolver : RESOLVERS) {
+                if (resolver.getExpectedSenderClass().isAssignableFrom(dispatcherClass)) {
+                    if (resolver.getArgumentClass().equals(parameterClass)) {
+                        resolverInUse = true;
+
+                        //noinspection unchecked
+                        argumentBuilder = (ArgumentBuilder<S, ?>) resolver.generateArgumentBuilder(argumentName);
+                    }
+                }
+            }
+
+            if (!resolverInUse) {
+                if (parameterClass.isEnum()) {
+                    Enum<?>[] enums = (Enum<?>[]) parameterClass.getEnumConstants();
+
+                    //noinspection unchecked
+                    argumentBuilder = (ArgumentBuilder<S, ?>) RequiredArgumentBuilder.argument(argumentName, StringArgumentType.word())
+                            .suggests((context, builder) -> {
+                                for (Enum<?> enu : enums) {
+                                    if (enu instanceof EnumStyle enumStyle) {
+                                        if (enumStyle.style().startsWith(builder.getRemaining())) builder.suggest(enumStyle.style());
+                                    } else {
+                                        if (enu.name().startsWith(builder.getRemaining())) builder.suggest(enu.name());
+                                    }
+                                }
+                                return builder.buildFuture();
+                            });
+                } else {
+                    throw new InvalidCommandException("Invalid argument type given.");
+                }
+            }
+        }
+
+        if (argumentBuilder == null) {
+            throw new InvalidCommandException("Invalid argument type given.");
+        }
+
+        if (previousArgumentBuilder != null) {
+            argumentBuilder = argumentBuilder.then(previousArgumentBuilder);
+        }
+
+        return argumentBuilder;
     }
 
     @SuppressWarnings("UnusedReturnValue")

@@ -1,5 +1,6 @@
 package net.nova.brigadierextras.annotated;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class Literal {
     private final String value;
 
