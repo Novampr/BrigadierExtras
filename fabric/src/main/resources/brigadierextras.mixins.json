@@ -1,13 +1,14 @@
 {
-	"required": true,
-	"package": "net.nova.brigadierextras.fabric.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"minVersion": "0.8",
-	"client": [
-	],
-	"mixins": [
-	],
-	"injectors": {
-		"defaultRequire": 1
+  "required": true,
+  "package": "net.nova.brigadierextras.fabric.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
+  "client": [
+  ],
+  "mixins": [
+    "CommandSourceStackAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
 	}
 }

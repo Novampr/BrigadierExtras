@@ -12,6 +12,8 @@ import net.nova.brigadierextras.annotated.AnnotationModifier;
 import net.nova.brigadierextras.velocity.annotated.Permission;
 import net.nova.brigadierextras.velocity.resolvers.PlayerResolver;
 import net.nova.brigadierextras.velocity.resolvers.RegisteredServerResolver;
+import net.nova.brigadierextras.velocity.senders.ConsoleSender;
+import net.nova.brigadierextras.velocity.senders.PlayerSender;
 import org.slf4j.Logger;
 
 @Plugin(
@@ -27,12 +29,10 @@ public class VelocityBrigadierExtras {
     }
 
     public final ProxyServer proxy;
-    private final Logger logger;
 
     @Inject
     public VelocityBrigadierExtras(ProxyServer proxy, Logger logger) {
         this.proxy = proxy;
-        this.logger = logger;
         INSTANCE = this;
 
         BrigadierExtras.init();
@@ -54,6 +54,12 @@ public class VelocityBrigadierExtras {
                 )
         );
         logger.debug("Registered Permission AnnotationModifier");
+
+        CommandBuilder.registerSenderConversion(new PlayerSender());
+        logger.debug("Registered PlayerSender SenderConversion");
+
+        CommandBuilder.registerSenderConversion(new ConsoleSender());
+        logger.debug("Registered ConsoleSender SenderConversion");
     }
 
     @Subscribe

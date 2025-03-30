@@ -1,8 +1,8 @@
 package net.nova.brigadierextras.annotated;
 
-public interface SenderConversion<T, S> {
-    Class<T> getSourceSender();
-    Class<S> getResultSender();
+public interface SenderConversion<Source, Result> {
+    Class<Source> getSourceSender();
+    Class<Result> getResultSender();
 
-    SenderData<S> convert(T sender);
+    SenderData<Result> convert(Source sender);
 }

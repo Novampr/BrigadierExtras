@@ -2,6 +2,9 @@ package net.nova.brigadierextras.annotated;
 
 import net.nova.brigadierextras.Status;
 
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 public class SenderData<S> {
     public S getSender() {
         return sender;
@@ -25,6 +28,17 @@ public class SenderData<S> {
         SenderData<S> senderData = new SenderData<>();
         senderData.sender = sender;
         return senderData;
+    }
+
+    /**
+     * Create a SenderData instance with a functional sender if not null
+     * @param sender The command sender to pass into the command
+     * @param onNull What to do when the sender is null
+     * @return an undefined SenderData
+     */
+    public static <S> SenderData<S> ofSender(S sender, Supplier<SenderData<S>> onNull) {
+        if (sender != null) return ofSender(sender);
+        else return onNull.get();
     }
 
     /**

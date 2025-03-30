@@ -1,6 +1,7 @@
 package net.nova.brigadierextras.fabric.test;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.numbers.NumberFormatType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -8,6 +9,9 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.sensing.SensorType;
+import net.minecraft.world.entity.schedule.Activity;
+import net.minecraft.world.level.levelgen.carver.WorldCarver;
 import net.nova.brigadierextras.Status;
 import net.nova.brigadierextras.annotated.Command;
 import net.nova.brigadierextras.annotated.Literal;
@@ -19,6 +23,15 @@ public class TestCommand {
     @Path
     public Status handle(FabricCommandSender fabricCommandSender) {
         fabricCommandSender.sendMessage(Component.literal("Working!"));
+        return Status.SUCCESS;
+    }
+
+    @Path
+    public Status handle(FabricCommandSender fabricCommandSender, Literal randomStuff, SensorType<?> sensorType, Activity activity, WorldCarver<?> worldCarver, NumberFormatType<?> numberFormatType) {
+        fabricCommandSender.sendMessage(Component.literal(sensorType.getClass().getName()));
+        fabricCommandSender.sendMessage(Component.literal(activity.getName()));
+        fabricCommandSender.sendMessage(Component.literal(worldCarver.getClass().getName()));
+        fabricCommandSender.sendMessage(Component.literal(numberFormatType.getClass().getName()));
         return Status.SUCCESS;
     }
 

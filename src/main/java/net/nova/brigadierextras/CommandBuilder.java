@@ -33,6 +33,16 @@ public class CommandBuilder {
 
     private static final Set<SenderConversion<?, ?>> SENDER_CONVERSIONS = new HashSet<>();
 
+    private static final Function<Object, Integer> statusCodeGetter = (result) -> {
+        if (result instanceof Status status) {
+            return status.getNum();
+        } else if (result instanceof Integer integer) {
+            return integer;
+        } else {
+            return Status.SUCCESS.getNum();
+        }
+    };
+
     public static <S> void registerCommand(CommandDispatcher<S> dispatcher, Class<S> dispatcherClass, Object command) throws InvalidCommandException {
         for (LiteralArgumentBuilder<S> builtCommand : buildCommand(dispatcherClass, command)) {
             dispatcher.register(builtCommand);
@@ -91,16 +101,6 @@ public class CommandBuilder {
                 ) {
                     throw new InvalidCommandException("Method must return an integer, status or nothing as a command path.");
                 }
-
-                Function<Object, Integer> statusCodeGetter = (result) -> {
-                    if (result instanceof Status status) {
-                        return status.getNum();
-                    } else if (result instanceof Integer integer) {
-                        return integer;
-                    } else {
-                        return Status.SUCCESS.getNum();
-                    }
-                };
 
                 if (method.getParameters().length == 0) {
                     throw new InvalidCommandException("Path must have dispatcher source be the first parameter, current path has no parameters.");

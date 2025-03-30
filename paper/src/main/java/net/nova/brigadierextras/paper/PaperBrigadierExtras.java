@@ -28,9 +28,7 @@ import net.nova.brigadierextras.paper.annotated.Permission;
 import net.nova.brigadierextras.paper.resolvers.EntityResolver;
 import net.nova.brigadierextras.paper.resolvers.PlayerResolver;
 import net.nova.brigadierextras.paper.resolvers.ResolverResolver;
-import net.nova.brigadierextras.paper.senders.CommandSenderSender;
-import net.nova.brigadierextras.paper.senders.EntitySender;
-import net.nova.brigadierextras.paper.senders.PlayerSender;
+import net.nova.brigadierextras.paper.senders.*;
 import net.nova.brigadierextras.paper.test.PaperCommandSender;
 import net.nova.brigadierextras.paper.test.TestCommand;
 import net.nova.brigadierextras.paper.wrappers.Time;
@@ -111,13 +109,6 @@ public final class PaperBrigadierExtras extends JavaPlugin {
         CommandBuilder.registerArgument(Attribute.class, ArgumentTypes.resource(RegistryKey.ATTRIBUTE));
         CommandBuilder.registerArgument(Fluid.class, ArgumentTypes.resource(RegistryKey.FLUID));
         CommandBuilder.registerArgument(Sound.class, ArgumentTypes.resource(RegistryKey.SOUND_EVENT));
-
-        try {
-            CommandBuilder.registerArgument(DataComponentType.class, ArgumentTypes.resource(RegistryKey.DATA_COMPONENT_TYPE));
-        } catch (NoClassDefFoundError e) {
-            getLogger().warning("DataComponentType was not registered. If you are on 1.21.1 or below, this is safe to ignore.");
-        }
-
         CommandBuilder.registerArgument(Biome.class, ArgumentTypes.resource(RegistryKey.BIOME));
         CommandBuilder.registerArgument(Structure.class, ArgumentTypes.resource(RegistryKey.STRUCTURE));
         CommandBuilder.registerArgument(TrimMaterial.class, ArgumentTypes.resource(RegistryKey.TRIM_MATERIAL));
@@ -132,6 +123,41 @@ public final class PaperBrigadierExtras extends JavaPlugin {
         CommandBuilder.registerArgument(EntityType.class, ArgumentTypes.resource(RegistryKey.ENTITY_TYPE));
         CommandBuilder.registerArgument(Particle.class, ArgumentTypes.resource(RegistryKey.PARTICLE_TYPE));
         CommandBuilder.registerArgument(PotionType.class, ArgumentTypes.resource(RegistryKey.POTION));
+
+        try {
+            RegistryKey.class.getDeclaredField("DATA_COMPONENT_TYPE");
+            CommandBuilder.registerArgument(DataComponentType.class, ArgumentTypes.resource(RegistryKey.DATA_COMPONENT_TYPE));
+        } catch (NoSuchFieldException e) { // Not present on version, ignore.
+
+        }
+
+        try {
+            RegistryKey.class.getDeclaredField("CHICKEN_VARIANT");
+            CommandBuilder.registerArgument(Chicken.Variant.class, ArgumentTypes.resource(RegistryKey.CHICKEN_VARIANT));
+        } catch (NoSuchFieldException e) { // Not present on version, ignore.
+
+        }
+
+        try {
+            RegistryKey.class.getDeclaredField("COW_VARIANT");
+            CommandBuilder.registerArgument(Cow.Variant.class, ArgumentTypes.resource(RegistryKey.COW_VARIANT));
+        } catch (NoSuchFieldException e) { // Not present on version, ignore.
+
+        }
+
+        try {
+            RegistryKey.class.getDeclaredField("PIG_VARIANT");
+            CommandBuilder.registerArgument(Pig.Variant.class, ArgumentTypes.resource(RegistryKey.PIG_VARIANT));
+        } catch (NoSuchFieldException e) { // Not present on version, ignore.
+
+        }
+
+        try {
+            RegistryKey.class.getDeclaredField("WOLF_SOUND_VARIANT");
+            CommandBuilder.registerArgument(Wolf.SoundVariant.class, ArgumentTypes.resource(RegistryKey.WOLF_SOUND_VARIANT));
+        } catch (NoSuchFieldException e) { // Not present on version, ignore.
+
+        }
 
         // Register resolvers for certain types that need resolving
         CommandBuilder.registerResolver(new ResolverResolver<>(
@@ -200,14 +226,11 @@ public final class PaperBrigadierExtras extends JavaPlugin {
                 )
         );
 
-        // Register Bukkit CommandSender conversion, allows use of CommandSender
-        CommandBuilder.registerSenderConversion(new CommandSenderSender());
-
-        // Register Player conversion, can only be run as a Player
+        CommandBuilder.registerSenderConversion(new CommandSender());
         CommandBuilder.registerSenderConversion(new PlayerSender());
-
-        // Register Entity conversion, can only be run as an Entity, includes Players
         CommandBuilder.registerSenderConversion(new EntitySender());
+        CommandBuilder.registerSenderConversion(new BlockSender());
+        CommandBuilder.registerSenderConversion(new ConsoleSender());
 
         if (System.getProperty("be.test", "nope").equals("TESTMEPLEASE")) {
             CommandBuilder.registerSenderConversion(new SenderConversion<CommandSourceStack, PaperCommandSender>() {
@@ -233,6 +256,10 @@ public final class PaperBrigadierExtras extends JavaPlugin {
 
     @Override
     public void onDisable() {
+
+    }
+
+    private void attemptToRegisterKey(String name) {
 
     }
 }
